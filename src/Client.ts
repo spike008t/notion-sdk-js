@@ -162,6 +162,11 @@ export default class Client {
     if (bodyAsJsonString !== undefined) {
       headers["content-type"] = "application/json"
     }
+
+    // Save an error stack trace in case the request fails.
+    // Otherwise, the stack after awaiting reponse will end in
+    // NodeJS's internal processTicksAndRejections internal/process/task_queues.js (97:50)
+    const savedStack = new Error()
     try {
       const response = await RequestTimeoutError.rejectAfterTimeout(
         this.#fetch(url.toString(), {
@@ -175,7 +180,7 @@ export default class Client {
 
       const responseText = await response.text()
       if (!response.ok) {
-        throw buildRequestError(response, responseText)
+        throw buildRequestError(response, responseText, savedStack)
       }
 
       const responseJson: ResponseBody = JSON.parse(responseText)

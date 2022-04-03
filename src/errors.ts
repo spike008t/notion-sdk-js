@@ -233,24 +233,32 @@ export class APIResponseError extends HTTPResponseError<APIErrorCode> {
 
 export function buildRequestError(
   response: SupportedResponse,
-  bodyText: string
+  bodyText: string,
+  savedStack: Error
 ): APIResponseError | UnknownHTTPResponseError {
   const apiErrorResponseBody = parseAPIErrorResponseBody(bodyText)
+  const stackSuffix = savedStack.stack?.split("\n").slice(1)
+  let error: APIResponseError | UnknownHTTPResponseError
   if (apiErrorResponseBody !== undefined) {
-    return new APIResponseError({
+    error = new APIResponseError({
       code: apiErrorResponseBody.code,
       message: apiErrorResponseBody.message,
       headers: response.headers,
       status: response.status,
       rawBodyText: bodyText,
     })
+  } else {
+    error = new UnknownHTTPResponseError({
+      message: undefined,
+      headers: response.headers,
+      status: response.status,
+      rawBodyText: bodyText,
+    })
   }
-  return new UnknownHTTPResponseError({
-    message: undefined,
-    headers: response.headers,
-    status: response.status,
-    rawBodyText: bodyText,
-  })
+  if (stackSuffix) {
+    error.stack = `${error.stack}\n${stackSuffix.join("\n")}`
+  }
+  return error
 }
 
 function parseAPIErrorResponseBody(
